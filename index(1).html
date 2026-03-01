@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokeri Tulokset</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a27;--border:#2a2a3d;--text:#e8e8f0;--text-dim:#8888a0;--accent:#00e68a;--accent-dim:#00e68a33;--red:#ff4466;--red-dim:#ff446633;--gold:#ffd700;--blue:#4488ff;--purple:#aa66ff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;line-height:1.6;overflow-x:hidden}
+.noise{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.container{max-width:1200px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+.hero{padding:60px 0 40px;text-align:center;position:relative}
+.hero::before{content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,var(--accent-dim) 0%,transparent 70%);pointer-events:none}
+.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:900;letter-spacing:-.03em;line-height:1.1;background:linear-gradient(135deg,var(--accent),#88ffcc,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:fadeUp .8s ease-out}
+.hero .meta{display:flex;gap:32px;justify-content:center;margin-top:20px;animation:fadeUp .8s ease-out .15s both}
+.hero .meta-item{display:flex;flex-direction:column;align-items:center}
+.hero .meta-item .num{font-family:'JetBrains Mono',monospace;font-size:1.8rem;font-weight:700;color:var(--accent)}
+.hero .meta-item .label{font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em}
+.tabs{display:flex;gap:4px;justify-content:center;margin-bottom:40px;background:var(--surface);border-radius:12px;padding:4px;width:fit-content;margin-left:auto;margin-right:auto;animation:fadeUp .8s ease-out .3s both;flex-wrap:wrap}
+.tab{padding:10px 20px;border-radius:10px;cursor:pointer;font-weight:600;font-size:.85rem;transition:all .25s;color:var(--text-dim);border:none;background:transparent;font-family:'Outfit',sans-serif}
+.tab:hover{color:var(--text);background:var(--surface2)}
+.tab.active{color:var(--bg);background:var(--accent)}
+.section{display:none;animation:fadeIn .4s ease-out}.section.active{display:block}
+.section-title{font-size:1.5rem;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;transition:border-color .3s}
+.card:hover{border-color:#3a3a5d}
+.card-title{font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-dim);margin-bottom:14px;font-weight:600}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.82rem}
+th{padding:10px 14px;text-align:left;font-family:'Outfit',sans-serif;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:9px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.pos{font-weight:700;color:var(--gold);width:32px}
+.player-name{font-family:'Outfit',sans-serif;font-weight:600;font-size:.92rem}
+.val-positive{color:var(--accent);font-weight:600}.val-negative{color:var(--red);font-weight:600}.val-neutral{color:var(--text-dim)}
+.elo-val{font-weight:700;font-size:.95rem}
+.level-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-family:'Outfit',sans-serif;font-size:.72rem;font-weight:700}
+.lv-1{background:#99999933;color:#999}.lv-2{background:#1ba55c33;color:#1ba55c}.lv-3{background:#1ba55c33;color:#1ba55c}
+.lv-4{background:#ffc80033;color:#ffc800}.lv-5{background:#ffc80033;color:#ffc800}
+.lv-6{background:#ff630933;color:#ff6309}.lv-7{background:#ff630933;color:#ff6309}.lv-8{background:#ff630933;color:#ff6309}
+.lv-9{background:#ee4b2b33;color:#ee4b2b}.lv-10{background:#ff000033;color:#ff0000}
+.input-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.input-group{display:flex;flex-direction:column;gap:4px}
+.input-group label{font-size:.78rem;font-weight:600;color:var(--text-dim)}
+.input-group input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.9rem;outline:none;transition:border-color .2s}
+.input-group input:focus{border-color:var(--accent)}.input-group input::placeholder{color:#555}
+.sum-display{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700;padding:12px 20px;border-radius:10px;display:inline-flex;align-items:center;gap:8px;margin-bottom:16px}
+.sum-ok{background:var(--accent-dim);color:var(--accent)}.sum-bad{background:var(--red-dim);color:var(--red)}
+.btn{padding:12px 28px;border-radius:10px;border:none;font-family:'Outfit',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--accent);color:var(--bg)}.btn-primary:hover{background:#00ff99;transform:translateY(-1px)}.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn-secondary:hover{border-color:var(--accent)}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid #ff446655}.btn-danger:hover{background:#ff446644}
+.btn-sm{padding:6px 14px;font-size:.78rem;border-radius:8px}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.add-player-row{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.add-player-row input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.9rem;outline:none;width:200px}
+.player-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:.82rem;margin:3px}
+.player-chip .chip-del{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:.7rem;padding:2px 4px;border-radius:4px}
+.player-chip .chip-del:hover{color:var(--red);background:var(--red-dim)}
+.settlement-item{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--surface2);border-radius:10px;margin-bottom:8px;font-size:.92rem}
+.settlement-arrow{color:var(--accent);font-weight:700;font-size:1.2rem}
+.settlement-amount{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--gold);margin-left:auto;font-size:1rem}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;transition:all .3s}
+.stat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.stat-card .emoji{font-size:1.6rem;margin-bottom:6px}.stat-card .stat-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-dim);margin-bottom:4px}
+.stat-card .stat-value{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700}.stat-card .stat-player{font-weight:600;color:var(--accent);margin-top:2px;font-size:.88rem}
+.h2h-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:768px){.h2h-grid{grid-template-columns:1fr}}
+.h2h-pair{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface2);border-radius:10px;font-size:.88rem;margin-bottom:6px}
+.h2h-corr{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.82rem;padding:3px 9px;border-radius:8px;flex-shrink:0}
+.corr-neg{background:var(--red-dim);color:var(--red)}.corr-pos{background:var(--accent-dim);color:var(--accent)}
+.chart-container{position:relative;height:380px;width:100%}
+@media(max-width:768px){.chart-container{height:280px}}
+.toast{position:fixed;bottom:24px;right:24px;padding:14px 24px;border-radius:12px;background:var(--accent);color:var(--bg);font-weight:700;font-size:.9rem;z-index:100;transform:translateY(100px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:480px;width:90%}
+.modal h3{margin-bottom:12px;font-size:1.1rem}.modal p{color:var(--text-dim);margin-bottom:16px;font-size:.9rem}
+.explainer{font-size:.75rem;color:var(--text-dim);margin-top:-8px;margin-bottom:16px;line-height:1.5;font-style:italic}
+.footer{text-align:center;padding:40px 0 28px;color:var(--text-dim);font-size:.78rem;border-top:1px solid var(--border);margin-top:56px}
+.del-game{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:.75rem;opacity:.5;transition:all .2s}.del-game:hover{color:var(--red);opacity:1}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end}
+@media(max-width:768px){.pay-grid{grid-template-columns:1fr 1fr}}
+.pay-grid label{font-size:.75rem;color:var(--text-dim);display:block;margin-bottom:4px}
+.pay-grid select,.pay-grid input[type=number]{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Outfit',sans-serif;width:100%;outline:none}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="container">
+  <div class="hero"><h1>POKERI TULOKSET</h1>
+    <div class="meta">
+      <div class="meta-item"><span class="num" id="m-games">0</span><span class="label">Peliä</span></div>
+      <div class="meta-item"><span class="num" id="m-players">0</span><span class="label">Pelaajaa</span></div>
+      <div class="meta-item"><span class="num" id="m-elo">0</span><span class="label">Max ELO</span></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="results">💰 Tulokset</button>
+    <button class="tab" data-tab="elo">🏆 ELO</button>
+    <button class="tab" data-tab="analytics">📊 Analytiikka</button>
+    <button class="tab" data-tab="charts">📈 Käyrät</button>
+    <button class="tab" data-tab="settlements">🤝 Velat</button>
+  </div>
+  <!-- RESULTS -->
+  <div id="results" class="section active">
+    <div class="section-title"><span>✏️</span> Kirjaa uusi tulos</div>
+    <div class="card"><div class="card-title">Syötä pelaajien tulokset (€) — tyhjä = ei pelaa</div>
+      <div class="input-grid" id="input-grid"></div>
+      <div class="sum-display sum-ok" id="sum-display">Σ = 0.00€</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="save-btn" onclick="saveGame()" disabled>Tallenna peli</button>
+        <button class="btn btn-secondary" id="bal-btn" onclick="autoBalance()" style="display:none">Tasaa erotus</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearInputs()">Tyhjennä</button>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Pelaajat</div>
+      <div class="add-player-row"><input type="text" id="new-player" placeholder="Uusi pelaaja..." maxlength="20" onkeydown="if(event.key==='Enter')addPlayer()"><button class="btn btn-secondary btn-sm" onclick="addPlayer()">+ Lisää</button></div>
+      <div id="chips"></div>
+    </div>
+    <div class="section-title" style="margin-top:28px"><span>📊</span> Kokonaistulokset</div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Pelaaja</th><th>Yhteensä</th><th>Pelejä</th><th>Ka./peli</th><th>Paras</th><th>Huonoin</th><th>Voitto-%</th></tr></thead><tbody id="totals-tb"></tbody></table></div></div>
+    <div class="section-title" style="margin-top:28px"><span>📋</span> Tuloshistoria</div>
+    <div class="card"><div class="table-wrap"><table><thead id="hist-head"></thead><tbody id="hist-tb"></tbody></table></div></div>
+  </div>
+  <!-- ELO -->
+  <div id="elo" class="section">
+    <div class="section-title"><span>🏆</span> ELO Ranking</div>
+    <div class="card"><div class="card-title">Virallinen ranking — vähintään 5 peliä</div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Pelaaja</th><th>ELO</th><th>Pelejä</th><th>Muutos</th><th>Max</th><th>Min</th><th>Level</th></tr></thead><tbody id="elo-tb"></tbody></table></div></div>
+    <div id="prov-sec" style="background:var(--surface2);border:1px dashed var(--border);border-radius:12px;padding:20px;margin-top:16px">
+      <div style="font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:12px;font-weight:600">⏳ Provisonaaliset — alle 5 peliä</div>
+      <div class="table-wrap"><table><thead><tr><th>Pelaaja</th><th>ELO*</th><th>Pelejä</th><th>Puuttuu</th></tr></thead><tbody id="prov-tb"></tbody></table></div></div>
+    <div class="card" style="margin-top:20px"><div class="card-title">ELO-muutoshistoria</div>
+      <div class="table-wrap"><table><thead id="eloh-head"></thead><tbody id="eloh-tb"></tbody></table></div></div>
+  </div>
+  <!-- ANALYTICS -->
+  <div id="analytics" class="section">
+    <div class="section-title"><span>📊</span> Analytiikka</div>
+    <div class="stat-grid" id="awards"></div>
+    <div class="card"><div class="card-title">⚔️ Head-to-Head — Viholliset & Liittolaiset</div>
+      <p class="explainer">Pearsonin korrelaatio pelaajien tulosten välillä samoissa peleissä. Negatiivinen = kun toinen voittaa, toinen häviää. Positiivinen = molemmat voittavat tai häviävät yhdessä. Vähintään 3 yhteistä peliä vaaditaan. Näytetään top 5 kumpaankin suuntaan.</p>
+      <div class="h2h-grid"><div><div style="font-weight:700;margin-bottom:10px;color:var(--red)">💀 Viholliset</div><div id="enemies"></div></div>
+        <div><div style="font-weight:700;margin-bottom:10px;color:var(--accent)">🤝 Liittolaiset</div><div id="allies"></div></div></div></div>
+    <div class="card"><div class="card-title">🔥❄️ Hot & Cold Streaks</div>
+      <p class="explainer">Pisin peräkkäisten voittojen tai tappioiden putki koko kauden ajalta. Voitto = tulos > 0€, tappio = tulos ≤ 0€. Poissaolot eivät katkaise putkea.</p>
+      <div class="table-wrap"><table><thead><tr><th>Pelaaja</th><th>🔥 Voittoputki</th><th>❄️ Tappioputki</th></tr></thead><tbody id="streaks-tb"></tbody></table></div></div>
+    <div class="card"><div class="card-title">😱 Pelottava pelaaja -indeksi</div>
+      <p class="explainer">Paljonko muiden pelaajien keskimääräinen tulos (€/peli) muuttuu, kun tämä pelaaja istuu pöytään vs. kun häntä ei ole. Negatiivinen = muut pärjäävät huonommin tämän ollessa mukana. Vähintään 3 peliä vaaditaan.</p>
+      <div class="table-wrap"><table><thead><tr><th>Pelaaja</th><th>Vaikutus muihin (€/peli)</th></tr></thead><tbody id="scary-tb"></tbody></table></div></div>
+  </div>
+  <!-- CHARTS -->
+  <div id="charts" class="section">
+    <div class="section-title"><span>📈</span> Käyrät</div>
+    <div class="card"><div class="card-title">Kumulatiivinen tuloskäyrä (€)</div><div class="chart-container"><canvas id="cumChart"></canvas></div></div>
+    <div class="card"><div class="card-title">ELO-kehitys peleittäin</div><div class="chart-container"><canvas id="eloChart"></canvas></div></div>
+  </div>
+  <!-- SETTLEMENTS -->
+  <div id="settlements" class="section">
+    <div class="section-title"><span>🤝</span> Kuka maksaa kenelle?</div>
+    <div class="card"><div class="card-title">Nettosaldot (tulokset − maksetut velat)</div>
+      <div class="table-wrap"><table><thead><tr><th>Pelaaja</th><th>Pelitulos</th><th>Maksettu</th><th>Vastaanotettu</th><th>Avoin saldo</th></tr></thead><tbody id="bal-tb"></tbody></table></div></div>
+    <div class="card"><div class="card-title">Avoimet maksut (minimoidut siirrot)</div><div id="sett-list"></div></div>
+    <div class="card"><div class="card-title">Kirjaa maksu</div>
+      <div class="pay-grid"><div><label>Maksaja</label><select id="pay-from"></select></div>
+        <div><label>Saaja</label><select id="pay-to"></select></div>
+        <div><label>Summa (€)</label><input type="number" id="pay-amt" step="0.01" min="0.01" placeholder="0.00"></div>
+        <button class="btn btn-primary btn-sm" onclick="recordPayment()" style="height:42px">Kirjaa</button></div></div>
+    <div class="card" id="pay-card" style="display:none"><div class="card-title">Maksuhistoria</div>
+      <div class="table-wrap"><table><thead><tr><th>Pvm</th><th>Maksaja</th><th>Saaja</th><th>Summa</th><th></th></tr></thead><tbody id="pay-tb"></tbody></table></div></div>
+  </div>
+  <div class="footer">Pokeri Tulokset — ELO v7: Z-score × K_z(40) + €-tulos × K_€(5). Vähintään 5 peliä rankingiin.</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal"><h3 id="cf-title">Oletko varma?</h3><p id="cf-text"></p>
+    <div class="btn-row"><button class="btn btn-danger btn-sm" id="cf-yes">Kyllä</button><button class="btn btn-secondary btn-sm" onclick="closeConfirm()">Peruuta</button></div></div></div>
+<script>
+const SK='pokeri_v3';
+const INIT_P=["Jussi","Lauri","Nuutti","Jere","Hypra","Eetu","Tiko","Leo","Mäysä","Lake","Esa","Masi"];
+const INIT_G=[
+{"Jussi":-10,"Lauri":-10,"Nuutti":60,"Hypra":-20,"Tiko":-10,"Mäysä":-10},
+{"Jussi":15.7,"Lauri":-10,"Nuutti":-20,"Hypra":6.85,"Eetu":-3.5,"Tiko":5.55,"Mäysä":5.4},
+{"Jussi":1.55,"Lauri":-0.85,"Nuutti":-26.4,"Eetu":21.1,"Tiko":-14,"Leo":18.6},
+{"Jussi":-1.2,"Lauri":-4.6,"Nuutti":-0.6,"Hypra":7,"Eetu":0.8,"Mäysä":-1.4},
+{"Jussi":4.4,"Lauri":-11.9,"Eetu":4.85,"Tiko":2.65},
+{"Lauri":1.5,"Nuutti":-3,"Jere":-10,"Hypra":6.9,"Eetu":4.6},
+{"Jussi":2.25,"Lauri":26.4,"Nuutti":-35,"Jere":14.3,"Hypra":-20,"Eetu":12.05},
+{"Jussi":4.7,"Lauri":-10,"Nuutti":1.75,"Jere":-0.6,"Hypra":4.15},
+{"Jussi":17.3,"Lauri":25.2,"Jere":1.3,"Hypra":-36.2,"Eetu":30,"Mäysä":-1.9,"Lake":-20,"Esa":-15.7},
+{"Jussi":-4.95,"Lauri":8.8,"Nuutti":5.95,"Jere":-10,"Hypra":-1.25,"Eetu":11.45,"Tiko":-10},
+{"Lauri":0.3,"Nuutti":-5.05,"Jere":4.85,"Eetu":-10,"Mäysä":-10,"Esa":18.3,"Masi":1.6},
+{"Jussi":-2.7,"Lauri":-10.5,"Nuutti":3.95,"Jere":-10.5,"Hypra":-10.5,"Eetu":30.25},
+{"Jussi":-0.45,"Lauri":-9.6,"Jere":6.1,"Eetu":3.95},
+{"Jussi":1.55,"Lauri":-5.4,"Jere":-8.3,"Eetu":21.6,"Mäysä":-9.4,"Esa":-0.05}
+];
+function load(){const r=localStorage.getItem(SK);if(r)return JSON.parse(r);const d={players:[...INIT_P],games:INIT_G.map(g=>({...g})),payments:[]};save(d);return d}
+function save(d){localStorage.setItem(SK,JSON.stringify(d))}
+function D(){return load()}
+// ELO
+const KZ=40,KE=5,SE=1500;
+function eloHist(d){const e={};d.players.forEach(p=>e[p]=[SE]);
+d.games.forEach(g=>{const ps=Object.keys(g),vs=ps.map(p=>g[p]),n=vs.length;
+if(n<2){d.players.forEach(p=>e[p].push(e[p][e[p].length-1]));return}
+const m=vs.reduce((a,b)=>a+b,0)/n,s=Math.sqrt(vs.reduce((a,v)=>a+(v-m)**2,0)/n)||1;
+const ch={};ps.forEach(p=>{ch[p]=KZ*((g[p]-m)/s)+KE*g[p]});
+d.players.forEach(p=>{const prev=e[p][e[p].length-1];e[p].push(ch[p]!==undefined?Math.round((prev+ch[p])*10)/10:prev)})});return e}
+function eloLv(e){if(e>=2101)return 10;if(e>=1701)return 9;if(e>=1551)return 8;if(e>=1401)return 7;if(e>=1201)return 6;if(e>=1001)return 5;if(e>=851)return 4;if(e>=701)return 3;if(e>=500)return 2;return 1}
+// Stats
+function pStats(d){return d.players.map(p=>{const r=d.games.filter(g=>g[p]!==undefined).map(g=>g[p]),n=r.length;
+if(!n)return{name:p,total:0,games:0,avg:0,best:0,worst:0,variance:0,winPct:0};
+const t=r.reduce((a,b)=>a+b,0),avg=t/n,v=n>1?Math.sqrt(r.reduce((a,x)=>a+(x-avg)**2,0)/(n-1)):0,w=r.filter(x=>x>0).length;
+return{name:p,total:Math.round(t*100)/100,games:n,avg:Math.round(avg*100)/100,best:Math.max(...r),worst:Math.min(...r),variance:Math.round(v*100)/100,winPct:Math.round(w/n*1000)/10}}).filter(p=>p.games>0).sort((a,b)=>b.total-a.total)}
+function corrs(d){const ps=d.players,gs=d.games,out=[];
+for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const p1=ps[i],p2=ps[j],sh=gs.filter(g=>g[p1]!==undefined&&g[p2]!==undefined);
+if(sh.length<3)continue;const v1=sh.map(g=>g[p1]),v2=sh.map(g=>g[p2]),m1=v1.reduce((a,b)=>a+b,0)/v1.length,m2=v2.reduce((a,b)=>a+b,0)/v2.length;
+let nm=0,d1=0,d2=0;for(let k=0;k<v1.length;k++){nm+=(v1[k]-m1)*(v2[k]-m2);d1+=(v1[k]-m1)**2;d2+=(v2[k]-m2)**2}
+out.push({p1,p2,corr:d1&&d2?Math.round(nm/Math.sqrt(d1*d2)*1000)/1000:0,games:sh.length})}return out}
+function streaks(d){return d.players.map(p=>{let mW=0,mL=0,cW=0,cL=0;
+d.games.forEach(g=>{if(g[p]===undefined)return;if(g[p]>0){cW++;cL=0;mW=Math.max(mW,cW)}else{cL++;cW=0;mL=Math.max(mL,cL)}});
+return{name:p,win:mW,loss:mL}}).filter(s=>s.win||s.loss).sort((a,b)=>b.win-a.win||(a.loss-b.loss))}
+function scary(d){const out=[];d.players.forEach(t=>{const played=d.games.filter(g=>g[t]!==undefined),away=d.games.filter(g=>g[t]===undefined);
+if(played.length<3)return;const avg=(gs,ex)=>{let s=0,c=0;gs.forEach(g=>Object.keys(g).forEach(p=>{if(p!==ex){s+=g[p];c++}}));return c?s/c:0};
+const w=avg(played,t),wo=away.length?avg(away,t):0;out.push({name:t,impact:Math.round((w-wo)*100)/100})});
+return out.sort((a,b)=>a.impact-b.impact)}
+function settlements(d){const st=pStats(d),pays=d.payments||[],bal={};
+st.forEach(s=>bal[s.name]={gt:s.total,paid:0,recv:0});
+pays.forEach(p=>{if(bal[p.from])bal[p.from].paid+=p.amount;if(bal[p.to])bal[p.to].recv+=p.amount});
+const nets=Object.entries(bal).map(([n,b])=>({name:n,gt:b.gt,paid:b.paid,recv:b.recv,
+open:Math.round((b.gt+b.paid-b.recv)*100)/100})).sort((a,b)=>b.open-a.open);
+const cr=[],db=[];nets.forEach(n=>{if(n.open>0.01)cr.push({name:n.name,amt:n.open});else if(n.open<-0.01)db.push({name:n.name,amt:-n.open})});
+cr.sort((a,b)=>b.amt-a.amt);db.sort((a,b)=>b.amt-a.amt);
+const tx=[];let i=0,j=0;
+while(i<db.length&&j<cr.length){const a=Math.round(Math.min(db[i].amt,cr[j].amt)*100)/100;
+if(a>0.01)tx.push({from:db[i].name,to:cr[j].name,amount:a});
+db[i].amt=Math.round((db[i].amt-a)*100)/100;cr[j].amt=Math.round((cr[j].amt-a)*100)/100;
+if(db[i].amt<0.01)i++;if(cr[j].amt<0.01)j++}return{nets,tx}}
+// Colors
+const CL=['#00e68a','#4488ff','#ff4466','#ffd700','#aa66ff','#ff8844','#44dddd','#ff66aa','#88ff44','#ff44dd','#44ffaa','#ffaa44','#8844ff','#44aaff'];
+function gc(i){return CL[i%CL.length]}
+function fmt(v){return v>=0?'+'+v.toFixed(2)+'€':v.toFixed(2)+'€'}
+function vc(v){return v>0.005?'val-positive':v<-0.005?'val-negative':'val-neutral'}
+function esc(p){return CSS.escape(p)}
+// Confirm
+let cfCb=null;
+function showCf(t,txt,cb){document.getElementById('cf-title').textContent=t;document.getElementById('cf-text').textContent=txt;
+document.getElementById('confirm-modal').classList.add('show');cfCb=cb;
+document.getElementById('cf-yes').onclick=()=>{closeConfirm();if(cfCb)cfCb()}}
+function closeConfirm(){document.getElementById('confirm-modal').classList.remove('show');cfCb=null}
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2500)}
+// Render all
+let chartsOk=false;
+function renderAll(){const d=D();renderMeta(d);renderInput(d);renderChips(d);renderTotals(d);renderHist(d);renderElo(d);renderAnalytics(d);renderSett(d);chartsOk=false;
+if(document.getElementById('charts').classList.contains('active'))renderCharts(d)}
+function renderMeta(d){const eh=eloHist(d);let mx=0;Object.values(eh).forEach(a=>a.forEach(v=>{if(v>mx)mx=v}));
+document.getElementById('m-games').textContent=d.games.length;
+document.getElementById('m-players').textContent=d.players.filter(p=>d.games.some(g=>g[p]!==undefined)).length;
+document.getElementById('m-elo').textContent=Math.round(mx)}
+function renderInput(d){document.getElementById('input-grid').innerHTML=d.players.map(p=>
+'<div class="input-group"><label>'+p+'</label><input type="number" step="0.01" id="inp-'+esc(p)+'" placeholder="—" oninput="updateSum()"></div>').join('');updateSum()}
+function renderChips(d){const hg=p=>d.games.some(g=>g[p]!==undefined);
+document.getElementById('chips').innerHTML=d.players.map(p=>{const cd=!hg(p);
+return'<span class="player-chip">'+p+(cd?'<button class="chip-del" onclick="removePlayer(\''+p.replace(/'/g,"\\'")+'\')">✕</button>':'')+'</span>'}).join('')}
+function updateSum(){const d=D();let s=0,c=0;d.players.forEach(p=>{const v=parseFloat(document.getElementById('inp-'+esc(p))?.value);if(!isNaN(v)){s+=v;c++}});
+s=Math.round(s*100)/100;const el=document.getElementById('sum-display'),ok=Math.abs(s)<0.01&&c>=2;
+el.textContent='Σ = '+(s>=0?'+':'')+s.toFixed(2)+'€'+(c<2?' (vähintään 2 pelaajaa)':'');
+el.className='sum-display '+(ok?'sum-ok':'sum-bad');
+document.getElementById('save-btn').disabled=!ok;
+document.getElementById('bal-btn').style.display=(!ok&&c>=2)?'inline-flex':'none'}
+function autoBalance(){const d=D(),inp={};let s=0,c=0;
+d.players.forEach(p=>{const v=parseFloat(document.getElementById('inp-'+esc(p))?.value);if(!isNaN(v)){inp[p]=v;s+=v;c++}});
+if(c<2)return;const adj=s/c,ps=Object.keys(inp);
+ps.forEach(p=>inp[p]=Math.round((inp[p]-adj)*100)/100);
+let ns=Object.values(inp).reduce((a,b)=>a+b,0);ns=Math.round(ns*100)/100;
+if(Math.abs(ns)>=0.01)inp[ps[0]]=Math.round((inp[ps[0]]-ns)*100)/100;
+ps.forEach(p=>document.getElementById('inp-'+esc(p)).value=inp[p]);updateSum();toast('Erotus tasattu')}
+function saveGame(){const d=D(),g={};let s=0,c=0;
+d.players.forEach(p=>{const v=parseFloat(document.getElementById('inp-'+esc(p))?.value);if(!isNaN(v)){g[p]=Math.round(v*100)/100;s+=v;c++}});
+if(Math.abs(Math.round(s*100)/100)>=0.01||c<2)return;
+showCf('Tallenna peli?','Peli '+(d.games.length+1)+': '+c+' pelaajaa',()=>{d.games.push(g);save(d);clearInputs();renderAll();toast('Peli '+d.games.length+' tallennettu!')})}
+function clearInputs(){const d=D();d.players.forEach(p=>{const e=document.getElementById('inp-'+esc(p));if(e)e.value=''});updateSum()}
+function addPlayer(){const i=document.getElementById('new-player'),n=i.value.trim();if(!n)return;const d=D();
+if(d.players.find(p=>p.toLowerCase()===n.toLowerCase())){toast('Pelaaja on jo listalla!');return}
+d.players.push(n);save(d);i.value='';renderAll();toast(n+' lisätty!')}
+function removePlayer(n){const d=D();if(d.games.some(g=>g[n]!==undefined)){toast('Ei voi poistaa — pelaajalla on tuloksia!');return}
+showCf('Poista pelaaja?','Poistetaanko '+n+' pelaajalistalta?',()=>{d.players=d.players.filter(p=>p!==n);save(d);renderAll();toast(n+' poistettu')})}
+function deleteGame(idx){const d=D(),ps=Object.keys(d.games[idx]).join(', ');
+showCf('Poista peli?','Poistetaanko peli '+(idx+1)+'? ('+ps+')',()=>{d.games.splice(idx,1);save(d);renderAll();toast('Peli poistettu')})}
+function renderTotals(d){const st=pStats(d);
+document.getElementById('totals-tb').innerHTML=st.map((s,i)=>
+'<tr><td class="pos">'+(i+1)+'</td><td class="player-name">'+s.name+'</td><td class="'+vc(s.total)+'">'+fmt(s.total)+'</td><td>'+s.games+'</td><td class="'+vc(s.avg)+'">'+(s.avg>=0?'+':'')+s.avg.toFixed(2)+'€</td><td class="val-positive">'+fmt(s.best)+'</td><td class="val-negative">'+fmt(s.worst)+'</td><td>'+s.winPct+'%</td></tr>').join('')}
+function renderHist(d){const act=d.players.filter(p=>d.games.some(g=>g[p]!==undefined));
+document.getElementById('hist-head').innerHTML='<tr><th>Peli</th>'+act.map(p=>'<th>'+p+'</th>').join('')+'<th></th></tr>';
+document.getElementById('hist-tb').innerHTML=d.games.map((g,i)=>'<tr><td style="font-weight:700">'+(i+1)+'</td>'+act.map(p=>{const v=g[p];
+return v===undefined?'<td style="color:var(--text-dim);opacity:.3">—</td>':'<td class="'+vc(v)+'">'+(v>=0?'+':'')+v.toFixed(2)+'</td>'}).join('')+
+'<td><button class="del-game" onclick="deleteGame('+i+')">✕</button></td></tr>').join('')}
+function renderElo(d){const eh=eloHist(d),rk=[],pv=[];
+d.players.forEach(p=>{const gc=d.games.filter(g=>g[p]!==undefined).length;if(!gc)return;
+const cur=eh[p][eh[p].length-1],mx=Math.max(...eh[p]),mn=Math.min(...eh[p]),ch=Math.round((cur-SE)*10)/10;
+const e={name:p,elo:cur,games:gc,change:ch,max:mx,min:mn,level:eloLv(cur)};
+gc>=5?rk.push(e):pv.push(e)});
+rk.sort((a,b)=>b.elo-a.elo);pv.sort((a,b)=>b.elo-a.elo);
+document.getElementById('elo-tb').innerHTML=rk.map((r,i)=>
+'<tr><td class="pos">'+(i+1)+'</td><td class="player-name">'+r.name+'</td><td class="elo-val">'+r.elo.toFixed(1)+'</td><td>'+r.games+'</td><td class="'+vc(r.change)+'">'+(r.change>=0?'+':'')+r.change.toFixed(1)+'</td><td>'+r.max.toFixed(1)+'</td><td>'+r.min.toFixed(1)+'</td><td><span class="level-badge lv-'+r.level+'">Level '+r.level+'</span></td></tr>').join('');
+document.getElementById('prov-tb').innerHTML=pv.map(r=>
+'<tr><td class="player-name">'+r.name+'</td><td class="elo-val">'+r.elo.toFixed(1)+'</td><td>'+r.games+'</td><td style="color:var(--text-dim)">'+(5-r.games)+' peliä</td></tr>').join('');
+document.getElementById('prov-sec').style.display=pv.length?'block':'none';
+// ELO history table
+const act=d.players.filter(p=>d.games.some(g=>g[p]!==undefined));
+document.getElementById('eloh-head').innerHTML='<tr><th>Peli</th>'+act.map(p=>'<th>'+p+'</th>').join('')+'</tr>';
+let rows='<tr><td style="font-weight:700">Alku</td>'+act.map(()=>'<td>1500.0</td>').join('')+'</tr>';
+d.games.forEach((_,i)=>{rows+='<tr><td style="font-weight:700">'+(i+1)+'</td>'+act.map(p=>{
+const cur=eh[p][i+1],prev=eh[p][i],diff=Math.round((cur-prev)*10)/10;
+const ds=diff?(' <span style="font-size:.7rem;color:'+(diff>0?'var(--accent)':'var(--red)')+'">('+(diff>0?'+':'')+diff.toFixed(1)+')</span>'):'';
+return'<td>'+cur.toFixed(1)+ds+'</td>'}).join('')+'</tr>'});
+document.getElementById('eloh-tb').innerHTML=rows}
+function renderAnalytics(d){const st=pStats(d);if(!st.length){document.getElementById('awards').innerHTML='';return}
+const m3=st.filter(s=>s.games>=3);
+const tw=st[0],ta=m3.length?[...m3].sort((a,b)=>b.avg-a.avg)[0]:null;
+const bn=[...st].sort((a,b)=>b.best-a.best)[0],wn=[...st].sort((a,b)=>a.worst-b.worst)[0];
+const sk=streaks(d),ts=sk.length?sk[0]:null,cs=sk.length?[...sk].sort((a,b)=>b.loss-a.loss)[0]:null;
+const lv=m3.length?[...m3].sort((a,b)=>a.variance-b.variance)[0]:null;
+const aw=[tw?{e:'💰',t:'Eniten voittoa',v:fmt(tw.total),p:tw.name}:0,ta?{e:'📈',t:'Paras ka. (min 3)',v:(ta.avg>=0?'+':'')+ta.avg.toFixed(2)+'€/peli',p:ta.name}:0,
+bn?{e:'👑',t:'Paras ilta',v:fmt(bn.best),p:bn.name}:0,wn?{e:'🕳️',t:'Huonoin ilta',v:fmt(wn.worst),p:wn.name}:0,
+ts?{e:'🔥',t:'Pisin voittoputki',v:ts.win+' peliä',p:ts.name}:0,cs?{e:'❄️',t:'Pisin tappioputki',v:cs.loss+' peliä',p:cs.name}:0,
+lv?{e:'🎯',t:'Tasaisin (min 3)',v:'σ = '+lv.variance,p:lv.name}:0].filter(Boolean);
+document.getElementById('awards').innerHTML=aw.map(a=>
+'<div class="stat-card"><div class="emoji">'+a.e+'</div><div class="stat-title">'+a.t+'</div><div class="stat-value">'+a.v+'</div><div class="stat-player">'+a.p+'</div></div>').join('');
+// H2H
+const co=corrs(d),neg=co.filter(c=>c.corr<-0.3).sort((a,b)=>a.corr-b.corr).slice(0,5),pos=co.filter(c=>c.corr>0.3).sort((a,b)=>b.corr-a.corr).slice(0,5);
+const h2h=(arr,cls)=>arr.length?arr.map(h=>
+'<div class="h2h-pair"><span class="h2h-corr '+cls+'">'+h.corr.toFixed(3)+'</span><span><strong>'+h.p1+'</strong> vs <strong>'+h.p2+'</strong></span><span style="margin-left:auto;color:var(--text-dim);font-size:.78rem">'+h.games+' peliä</span></div>').join(''):'<p style="color:var(--text-dim);font-size:.85rem;padding:8px">Ei tarpeeksi dataa</p>';
+document.getElementById('enemies').innerHTML=h2h(neg,'corr-neg');document.getElementById('allies').innerHTML=h2h(pos,'corr-pos');
+// Streaks
+document.getElementById('streaks-tb').innerHTML=sk.map(s=>
+'<tr><td class="player-name">'+s.name+'</td><td class="val-positive">'+'🔥'.repeat(Math.min(s.win,7))+' '+s.win+'</td><td class="val-negative">'+'❄️'.repeat(Math.min(s.loss,5))+' '+s.loss+'</td></tr>').join('');
+// Scary
+document.getElementById('scary-tb').innerHTML=scary(d).map(s=>
+'<tr><td class="player-name">'+s.name+'</td><td class="'+vc(s.impact)+'" style="font-size:.95rem">'+(s.impact>=0?'+':'')+s.impact.toFixed(2)+'€</td></tr>').join('')}
+function renderSett(d){const{nets,tx}=settlements(d),pays=d.payments||[];
+document.getElementById('bal-tb').innerHTML=nets.map(n=>
+'<tr><td class="player-name">'+n.name+'</td><td class="'+vc(n.gt)+'">'+fmt(n.gt)+'</td><td>'+(n.paid>0?'-'+n.paid.toFixed(2)+'€':'—')+'</td><td>'+(n.recv>0?'+'+n.recv.toFixed(2)+'€':'—')+'</td><td class="'+vc(n.open)+'" style="font-weight:700;font-size:.95rem">'+fmt(n.open)+'</td></tr>').join('');
+document.getElementById('sett-list').innerHTML=tx.length?tx.map(t=>
+'<div class="settlement-item"><span style="font-weight:600;color:var(--red)">'+t.from+'</span><span class="settlement-arrow">→</span><span style="font-weight:600;color:var(--accent)">'+t.to+'</span><span class="settlement-amount">'+t.amount.toFixed(2)+'€</span></div>').join(''):'<p style="color:var(--text-dim);padding:8px">Kaikki tasoissa! 🎉</p>';
+const act=d.players.filter(p=>d.games.some(g=>g[p]!==undefined)),opts=act.map(p=>'<option value="'+p+'">'+p+'</option>').join('');
+document.getElementById('pay-from').innerHTML=opts;document.getElementById('pay-to').innerHTML=opts;
+if(pays.length){document.getElementById('pay-card').style.display='block';
+document.getElementById('pay-tb').innerHTML=pays.map((p,i)=>
+'<tr><td>'+(p.date||'—')+'</td><td>'+p.from+'</td><td>'+p.to+'</td><td class="val-positive">'+p.amount.toFixed(2)+'€</td><td><button class="del-game" onclick="delPay('+i+')">✕</button></td></tr>').join('')}
+else document.getElementById('pay-card').style.display='none'}
+function recordPayment(){const f=document.getElementById('pay-from').value,t=document.getElementById('pay-to').value,a=parseFloat(document.getElementById('pay-amt').value);
+if(!f||!t||f===t){toast('Valitse eri maksaja ja saaja');return}if(isNaN(a)||a<=0){toast('Syötä summa');return}
+showCf('Kirjaa maksu?',f+' → '+t+': '+a.toFixed(2)+'€',()=>{const d=D();if(!d.payments)d.payments=[];
+d.payments.push({from:f,to:t,amount:Math.round(a*100)/100,date:new Date().toLocaleDateString('fi-FI')});
+save(d);document.getElementById('pay-amt').value='';renderAll();toast('Maksu kirjattu!')})}
+function delPay(i){showCf('Poista maksu?','Poistetaanko tämä maksukirjaus?',()=>{const d=D();d.payments.splice(i,1);save(d);renderAll();toast('Maksu poistettu')})}
+// Charts
+let cumC=null,eloC=null;
+function renderCharts(d){if(chartsOk&&cumC)return;const act=d.players.filter(p=>d.games.some(g=>g[p]!==undefined)),eh=eloHist(d);
+const cum={};act.forEach(p=>{cum[p]=[0];let c=0;d.games.forEach(g=>{if(g[p]!==undefined)c+=g[p];cum[p].push(Math.round(c*100)/100)})});
+const lb=Array.from({length:d.games.length+1},(_,i)=>i===0?'Start':i);
+Chart.defaults.color='#8888a0';Chart.defaults.borderColor='#2a2a3d';Chart.defaults.font.family='Outfit';
+if(cumC)cumC.destroy();cumC=new Chart(document.getElementById('cumChart').getContext('2d'),{type:'line',
+data:{labels:lb,datasets:act.map((p,i)=>({label:p,data:cum[p],borderColor:gc(i),backgroundColor:gc(i)+'22',borderWidth:2.5,pointRadius:3,pointHoverRadius:6,tension:.3,fill:false}))},
+options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',padding:14}},
+tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y>=0?'+':'')+c.parsed.y.toFixed(2)+'€'}}},
+scales:{y:{grid:{color:'#1a1a27'},ticks:{callback:v=>v+'€'}},x:{grid:{color:'#1a1a27'}}}}});
+const elb=['Alku',...Array.from({length:d.games.length},(_,i)=>i+1)];
+if(eloC)eloC.destroy();eloC=new Chart(document.getElementById('eloChart').getContext('2d'),{type:'line',
+data:{labels:elb,datasets:act.map((p,i)=>({label:p,data:eh[p],borderColor:gc(i),backgroundColor:gc(i)+'22',borderWidth:2.5,pointRadius:3,pointHoverRadius:6,tension:.3,fill:false}))},
+options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',padding:14}},
+tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toFixed(1)}}},
+scales:{y:{grid:{color:'#1a1a27'}},x:{grid:{color:'#1a1a27'}}}}});chartsOk=true}
+// Tabs
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',function(){
+document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+document.getElementById(this.dataset.tab).classList.add('active');this.classList.add('active');
+if(this.dataset.tab==='charts')renderCharts(D())}));
+renderAll();
+</script>
+</body>
+</html>
