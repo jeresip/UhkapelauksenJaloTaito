@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokeri SZN 3 — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface2: #1a1a27;
+  --border: #2a2a3d;
+  --text: #e8e8f0;
+  --text-dim: #8888a0;
+  --accent: #00e68a;
+  --accent-dim: #00e68a33;
+  --red: #ff4466;
+  --red-dim: #ff446633;
+  --gold: #ffd700;
+  --gold-dim: #ffd70033;
+  --blue: #4488ff;
+  --purple: #aa66ff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.noise {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+/* HERO */
+.hero {
+  padding: 80px 0 60px;
+  text-align: center;
+  position: relative;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -100px; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, var(--accent-dim) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero h1 {
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  background: linear-gradient(135deg, var(--accent), #88ffcc, var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  animation: fadeUp 0.8s ease-out;
+}
+.hero .subtitle {
+  font-size: 1.15rem;
+  color: var(--text-dim);
+  margin-top: 12px;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  animation: fadeUp 0.8s ease-out 0.15s both;
+}
+.hero .meta {
+  display: flex; gap: 32px; justify-content: center; margin-top: 28px;
+  animation: fadeUp 0.8s ease-out 0.3s both;
+}
+.hero .meta-item {
+  display: flex; flex-direction: column; align-items: center;
+}
+.hero .meta-item .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem; font-weight: 700; color: var(--accent);
+}
+.hero .meta-item .label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* NAV TABS */
+.tabs {
+  display: flex; gap: 4px; justify-content: center; margin-bottom: 48px;
+  background: var(--surface); border-radius: 12px; padding: 4px;
+  width: fit-content; margin-left: auto; margin-right: auto;
+  animation: fadeUp 0.8s ease-out 0.45s both;
+  flex-wrap: wrap;
+}
+.tab {
+  padding: 10px 24px; border-radius: 10px; cursor: pointer;
+  font-weight: 600; font-size: 0.9rem; transition: all 0.25s;
+  color: var(--text-dim); border: none; background: transparent;
+  font-family: 'Outfit', sans-serif;
+}
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active { color: var(--bg); background: var(--accent); }
+
+/* SECTIONS */
+.section { display: none; animation: fadeIn 0.4s ease-out; }
+.section.active { display: block; }
+.section-title {
+  font-size: 1.6rem; font-weight: 800; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 12px;
+}
+.section-title .icon { font-size: 1.4rem; }
+
+/* CARDS */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 24px;
+  transition: border-color 0.3s;
+}
+.card:hover { border-color: var(--accent); }
+.card-title {
+  font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--text-dim); margin-bottom: 16px; font-weight: 600;
+}
+
+/* TABLE */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+}
+th {
+  padding: 12px 16px; text-align: left;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700; font-size: 0.75rem;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text-dim);
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+
+.pos { font-weight: 700; color: var(--gold); width: 36px; }
+.player-name { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.95rem; }
+.val-positive { color: var(--accent); font-weight: 600; }
+.val-negative { color: var(--red); font-weight: 600; }
+.val-neutral { color: var(--text-dim); }
+.elo-val { font-weight: 700; font-size: 1rem; }
+
+/* ELO LEVEL BADGES */
+.level-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 20px;
+  font-family: 'Outfit', sans-serif; font-size: 0.75rem; font-weight: 700;
+}
+.level-10 { background: #ffd70033; color: #ffd700; }
+.level-9 { background: #c0c0c033; color: #c0c0c0; }
+.level-8 { background: #cd7f3233; color: #cd7f32; }
+.level-6 { background: #4488ff33; color: #4488ff; }
+.level-5 { background: #aa66ff33; color: #aa66ff; }
+
+/* CHART */
+.chart-container {
+  position: relative; height: 400px; width: 100%;
+}
+@media (max-width: 768px) {
+  .chart-container { height: 300px; }
+}
+
+/* STAT GRID */
+.stat-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s;
+}
+.stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.stat-card .emoji { font-size: 1.8rem; margin-bottom: 8px; }
+.stat-card .stat-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); margin-bottom: 4px; }
+.stat-card .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.05rem; font-weight: 700; }
+.stat-card .stat-player { font-weight: 600; color: var(--accent); margin-top: 4px; }
+
+/* TITLE CARDS */
+.title-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px; margin-bottom: 24px;
+}
+.title-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex; align-items: center; gap: 14px;
+  transition: all 0.3s;
+}
+.title-card:hover { border-color: var(--gold); }
+.title-card .tc-emoji { font-size: 2rem; flex-shrink: 0; }
+.title-card .tc-info { flex: 1; }
+.title-card .tc-name { font-weight: 700; font-size: 1rem; }
+.title-card .tc-title { font-size: 0.75rem; color: var(--gold); font-weight: 600; }
+
+/* H2H */
+.h2h-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .h2h-grid { grid-template-columns: 1fr; } }
+.h2h-pair {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface2);
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+.h2h-corr {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; font-size: 0.85rem;
+  padding: 4px 10px; border-radius: 8px;
+  flex-shrink: 0;
+}
+.corr-neg { background: var(--red-dim); color: var(--red); }
+.corr-pos { background: var(--accent-dim); color: var(--accent); }
+
+/* PROVISIONAL */
+.provisional {
+  background: var(--surface2);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 16px;
+}
+.provisional .prov-title {
+  font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text-dim); margin-bottom: 12px; font-weight: 600;
+}
+
+/* FOOTER */
+.footer {
+  text-align: center; padding: 48px 0 32px;
+  color: var(--text-dim); font-size: 0.8rem;
+  border-top: 1px solid var(--border);
+  margin-top: 64px;
+}
+
+/* ANIMS */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* RESULT GRID (per game) */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 6px;
+}
+.game-cell {
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.game-cell.win { background: var(--accent-dim); color: var(--accent); }
+.game-cell.loss { background: var(--red-dim); color: var(--red); }
+.game-cell.absent { background: transparent; color: var(--text-dim); opacity: 0.3; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div class="container">
+  <div class="hero">
+    <h1>POKERI SZN 3</h1>
+    <div class="subtitle">Kausi 2.5 — Live Dashboard</div>
+    <div class="meta">
+      <div class="meta-item"><span class="num">14</span><span class="label">Peliä</span></div>
+      <div class="meta-item"><span class="num">12</span><span class="label">Pelaajaa</span></div>
+      <div class="meta-item"><span class="num">2524</span><span class="label">Max ELO</span></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('elo')">🏆 ELO Ranking</button>
+    <button class="tab" onclick="showTab('results')">💰 Tulokset</button>
+    <button class="tab" onclick="showTab('charts')">📈 Käyrät</button>
+    <button class="tab" onclick="showTab('analytics')">📊 Analytiikka</button>
+  </div>
+
+  <!-- ELO TAB -->
+  <div id="elo" class="section active">
+    <div class="section-title"><span class="icon">🏆</span> ELO Ranking</div>
+    <div class="card">
+      <div class="card-title">Virallinen ranking — vähintään 5 peliä</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Pelaaja</th><th>ELO</th><th>Pelejä</th><th>Muutos</th><th>Max</th><th>Min</th><th>Level</th></tr></thead>
+          <tbody id="elo-table"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="provisional">
+      <div class="prov-title">⏳ Provisonaaliset — alle 5 peliä</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pelaaja</th><th>ELO*</th><th>Pelejä</th><th>Puuttuu</th></tr></thead>
+          <tbody id="prov-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS TAB -->
+  <div id="results" class="section">
+    <div class="section-title"><span class="icon">💰</span> Tulokset</div>
+    <div class="card">
+      <div class="card-title">Kokonaistulokset — lajiteltu</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Pelaaja</th><th>Yhteensä</th><th>Pelejä</th><th>Ka./peli</th><th>Paras</th><th>Huonoin</th><th>Varianssi</th></tr></thead>
+          <tbody id="results-table"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Peli-iltojen tulokset</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Peli</th><th>Jussi</th><th>Lauri</th><th>Nuutti</th><th>Jere</th><th>Hypra</th><th>Eetu</th><th>Tiko</th><th>Leo</th><th>Mäysä</th><th>Lake</th><th>Esa</th><th>Masi</th></tr></thead>
+          <tbody id="games-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS TAB -->
+  <div id="charts" class="section">
+    <div class="section-title"><span class="icon">📈</span> Käyrät</div>
+    <div class="card">
+      <div class="card-title">Kumulatiivinen tuloskäyrä (€)</div>
+      <div class="chart-container"><canvas id="cumChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">ELO-kehitys peleittäin</div>
+      <div class="chart-container"><canvas id="eloChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS TAB -->
+  <div id="analytics" class="section">
+    <div class="section-title"><span class="icon">📊</span> Analytiikka</div>
+
+    <div class="stat-grid" id="awards-grid"></div>
+
+    <div class="card">
+      <div class="card-title">🎖️ Pelaajatittelit</div>
+      <div class="title-grid" id="titles-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚔️ Head-to-Head</div>
+      <div class="h2h-grid">
+        <div>
+          <div style="font-weight:700;margin-bottom:12px;color:var(--red);">💀 Viholliset</div>
+          <div id="enemies"></div>
+        </div>
+        <div>
+          <div style="font-weight:700;margin-bottom:12px;color:var(--accent);">🤝 Liittolaiset</div>
+          <div id="allies"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔥❄️ Hot & Cold Streaks</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pelaaja</th><th>🔥 Voittoputki</th><th>❄️ Tappioputki</th></tr></thead>
+          <tbody id="streaks-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">😱 Pelottava pelaaja -indeksi</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pelaaja</th><th>Muut ka. (pöydässä)</th><th>Muut ka. (poissa)</th><th>Vaikutus</th></tr></thead>
+          <tbody id="scary-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⏱️ "Jos olisit lopettanut" -hetket</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pelaaja</th><th>Huippuhetki</th><th>Huipulla €</th><th>Nyt €</th><th>Hävitty</th></tr></thead>
+          <tbody id="peak-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Pokeri SZN 3 — Dashboard &copy; 2025. Z-score + €-tulosbonus ELO v7. K_z=40, K_€=5/€.
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const eloRanking = [
+  { pos:1, name:"Eetu", elo:2523.6, games:12, change:1023.6, max:2523.6, min:1469.9, level:10 },
+  { pos:2, name:"Jussi", elo:1740.6, games:12, change:240.6, max:1801.9, min:1435.2, level:9 },
+  { pos:3, name:"Jere", elo:1346.2, games:9, change:-153.8, max:1500, min:1346.2, level:6 },
+  { pos:4, name:"Tiko", elo:1309.3, games:5, change:-190.7, max:1500, min:1309.3, level:6 },
+  { pos:5, name:"Nuutti", elo:1299.6, games:10, change:-200.4, max:1888.6, min:1235.6, level:6 },
+  { pos:6, name:"Mäysä", elo:1269, games:6, change:-231, max:1500, min:1269, level:6 },
+  { pos:7, name:"Lauri", elo:1235.3, games:14, change:-264.7, max:1500, min:1139.4, level:6 },
+  { pos:8, name:"Hypra", elo:1196.9, games:9, change:-303.1, max:1624.3, min:1196.9, level:5 },
+];
+
+const provisional = [
+  { name:"Leo", elo:1637.4, games:1, missing:"4 peliä" },
+  { name:"Esa", elo:1563.8, games:3, missing:"2 peliä" },
+  { name:"Masi", elo:1515, games:1, missing:"4 peliä" },
+  { name:"Lake", elo:1363.3, games:1, missing:"4 peliä" },
+];
+
+const players = ["Jussi","Lauri","Nuutti","Jere","Hypra","Eetu","Tiko","Leo","Mäysä","Lake","Esa","Masi"];
+const gameResults = [
+  [-10,-10,60,null,-20,null,-10,null,-10,null,null,null],
+  [15.7,-10,-20,null,6.85,-3.5,5.55,null,5.4,null,null,null],
+  [1.55,-0.85,-26.4,null,null,21.1,-14,18.6,null,null,null,null],
+  [-1.2,-4.6,-0.6,null,7,0.8,null,null,-1.4,null,null,null],
+  [4.4,-11.9,null,null,null,4.85,2.65,null,null,null,null,null],
+  [null,1.5,-3,-10,6.9,4.6,null,null,null,null,null,null],
+  [2.25,26.4,-35,14.3,-20,12.05,null,null,null,null,null,null],
+  [4.7,-10,1.75,-0.6,4.15,null,null,null,null,null,null,null],
+  [17.3,25.2,null,1.3,-36.2,30,null,null,-1.9,-20,-15.7,null],
+  [-4.95,8.8,5.95,-10,-1.25,11.45,-10,null,null,null,null,null],
+  [null,0.3,-5.05,4.85,null,-10,null,null,-10,null,18.3,1.6],
+  [-2.7,-10.5,3.95,-10.5,-10.5,30.25,null,null,null,null,null,null],
+  [-0.45,-9.6,null,6.1,null,3.95,null,null,null,null,null,null],
+  [1.55,-5.4,null,-8.3,null,21.6,null,null,-9.4,null,-0.05,null],
+];
+
+const playerStats = [
+  { name:"Eetu", total:127.15, games:12, avg:10.60, best:30.25, worst:-10, variance:12.89, title:"Voittokone 🏆" },
+  { name:"Jussi", total:28.15, games:12, avg:2.35, best:17.3, worst:-10, variance:7.77, title:null },
+  { name:"Tiko", total:-25.8, games:5, avg:-5.16, best:5.55, worst:-14, variance:8.67, title:null },
+  { name:"Leo", total:18.6, games:1, avg:18.6, best:18.6, worst:18.6, variance:0, title:null },
+  { name:"Lauri", total:-10.65, games:14, avg:-0.76, best:26.4, worst:-11.9, variance:12.71, title:"Kova Luuri 💀" },
+  { name:"Esa", total:2.55, games:3, avg:0.85, best:18.3, worst:-15.7, variance:17.02, title:null },
+  { name:"Lake", total:-20, games:1, avg:-20, best:-20, worst:-20, variance:0, title:null },
+  { name:"Masi", total:1.6, games:1, avg:1.6, best:1.6, worst:1.6, variance:0, title:null },
+  { name:"Nuutti", total:-18.4, games:10, avg:-1.84, best:60, worst:-35, variance:25.77, title:"Yön Kuningas 👑" },
+  { name:"Jere", total:-12.85, games:9, avg:-1.43, best:14.3, worst:-10.5, variance:8.86, title:null },
+  { name:"Mäysä", total:-27.3, games:6, avg:-4.55, best:5.4, worst:-20, variance:6.31, title:"Tasainen Tienari 🎯" },
+  { name:"Hypra", total:-63.05, games:9, avg:-7.01, best:7, worst:-36.2, variance:15.58, title:"Syvin Kuoppa 🕳️" },
+];
+playerStats.sort((a,b) => b.total - a.total);
+
+const cumulativeData = {
+  labels: Array.from({length:14}, (_,i)=>i+1),
+  datasets: {
+    "Eetu": [0,-3.5,17.6,18.4,23.25,27.85,39.9,39.9,69.9,81.35,71.35,101.6,105.55,127.15],
+    "Jussi": [-10,5.7,7.25,6.05,10.45,10.45,12.7,17.4,34.7,29.75,29.75,27.05,26.6,28.15],
+    "Lauri": [-10,-20,-20.85,-25.45,-37.35,-35.85,-9.45,-19.45,5.75,14.55,14.85,4.35,-5.25,-10.65],
+    "Nuutti": [60,40,13.6,13,13,10,-25,-23.25,-23.25,-17.3,-22.35,-18.4,-18.4,-18.4],
+    "Jere": [0,0,0,0,0,-10,4.3,3.7,5,-5,-0.15,-10.65,-4.55,-12.85],
+    "Hypra": [-20,-13.15,-13.15,-6.15,-6.15,0.75,-19.25,-15.1,-51.3,-52.55,-52.55,-63.05,-63.05,-63.05],
+    "Tiko": [-10,-4.45,-18.45,-18.45,-15.8,-15.8,-15.8,-15.8,-15.8,-25.8,-25.8,-25.8,-25.8,-25.8],
+    "Mäysä": [-10,-4.6,-4.6,-6,-6,-6,-6,-6,-7.9,-7.9,-17.9,-17.9,-17.9,-27.3],
+  }
+};
+
+const eloHistory = {
+  labels: ["Alku",1,2,3,4,5,6,7,8,9,10,11,12,13,14],
+  datasets: {
+    "Eetu": [1500,1500,1469.9,1625.7,1638.8,1691.1,1744.8,1827.9,1827.9,2033,2099.5,2013.8,2202.4,2263.4,2523.6],
+    "Jussi": [1500,1435.2,1570.2,1581.6,1562,1609.4,1609.4,1624.9,1683.6,1801.9,1753.2,1753.2,1726.3,1718.7,1740.6],
+    "Lauri": [1500,1435.2,1349.2,1342.9,1267.7,1139.4,1156.9,1338.9,1214,1386.3,1478.1,1484.4,1370.6,1272.1,1235.3],
+    "Nuutti": [1500,1888.6,1716.7,1521.7,1511.9,1511.9,1476.9,1235.6,1257.5,1257.5,1299.6,1264.6,1297.3,1297.3,1299.6],
+    "Jere": [1500,1500,1500,1500,1500,1500,1383.3,1481.9,1474.4,1483.3,1413.1,1444.2,1375.3,1406.3,1346.2],
+    "Hypra": [1500,1370.5,1429.4,1429.4,1543.8,1543.8,1624.3,1486.4,1538.2,1290.7,1277.4,1277.4,1196.9,1196.9,1196.9],
+    "Tiko": [1500,1435.2,1482.9,1379.5,1379.5,1408.1,1408.1,1408.1,1408.1,1408.1,1309.3,1309.3,1309.3,1309.3,1309.3],
+    "Mäysä": [1500,1435.2,1481.6,1481.6,1458.7,1458.7,1458.7,1458.7,1458.7,1445.7,1445.7,1348.7,1348.7,1348.7,1269],
+  }
+};
+
+const enemies = [
+  { p1:"Eetu", p2:"Tiko", corr:-0.952, games:4 },
+  { p1:"Nuutti", p2:"Jere", corr:-0.857, games:6 },
+  { p1:"Hypra", p2:"Eetu", corr:-0.802, games:7 },
+  { p1:"Jussi", p2:"Nuutti", corr:-0.68, games:8 },
+  { p1:"Nuutti", p2:"Mäysä", corr:-0.658, games:4 },
+];
+const allies = [
+  { p1:"Jussi", p2:"Tiko", corr:0.769, games:5 },
+  { p1:"Jussi", p2:"Mäysä", corr:0.74, games:5 },
+  { p1:"Hypra", p2:"Mäysä", corr:0.528, games:4 },
+  { p1:"Lauri", p2:"Jere", corr:0.44, games:9 },
+  { p1:"Jussi", p2:"Jere", corr:0.331, games:7 },
+];
+
+const streaks = [
+  { name:"Eetu", win:7, loss:1 },
+  { name:"Jussi", win:4, loss:3 },
+  { name:"Lauri", win:3, loss:5 },
+  { name:"Hypra", win:3, loss:3 },
+  { name:"Nuutti", win:2, loss:5 },
+  { name:"Jere", win:1, loss:1 },
+  { name:"Tiko", win:1, loss:1 },
+  { name:"Mäysä", win:1, loss:4 },
+  { name:"Esa", win:1, loss:1 },
+];
+
+const scaryIndex = [
+  { name:"Eetu", withAvg:-2.23, withoutAvg:2.58, impact:-4.81 },
+  { name:"Nuutti", withAvg:-0.42, withoutAvg:2.82, impact:-3.24 },
+  { name:"Lauri", withAvg:0.16, withoutAvg:0, impact:0.16 },
+  { name:"Tiko", withAvg:0.75, withoutAvg:0.36, impact:0.39 },
+  { name:"Jussi", withAvg:-0.47, withoutAvg:-2.1, impact:1.63 },
+  { name:"Jere", withAvg:0.98, withoutAvg:-0.66, impact:1.65 },
+  { name:"Mäysä", withAvg:1.43, withoutAvg:-0.44, impact:1.87 },
+  { name:"Hypra", withAvg:2.19, withoutAvg:-0.81, impact:3 },
+  { name:"Esa", withAvg:4.08, withoutAvg:-0.3, impact:4.38 },
+];
+
+const peakMoments = [
+  { name:"Nuutti", peak:1, peakVal:60, now:-18.4, lost:-78.4 },
+  { name:"Hypra", peak:6, peakVal:0.75, now:-63.05, lost:-63.8 },
+  { name:"Lauri", peak:11, peakVal:14.85, now:-10.65, lost:-25.5 },
+  { name:"Mäysä", peak:2, peakVal:-4.6, now:-27.3, lost:-22.7 },
+  { name:"Tiko", peak:2, peakVal:-4.45, now:-25.8, lost:-21.35 },
+  { name:"Jere", peak:9, peakVal:5, now:-12.85, lost:-17.85 },
+  { name:"Jussi", peak:9, peakVal:34.7, now:28.15, lost:-6.55 },
+  { name:"Esa", peak:11, peakVal:2.6, now:2.55, lost:-0.05 },
+  { name:"Eetu", peak:14, peakVal:127.15, now:127.15, lost:0 },
+];
+
+const awards = [
+  { emoji:"👑", title:"Yön Kuningas", value:"60€ yhdessä illassa", player:"Nuutti" },
+  { emoji:"🏆", title:"Voittokone", value:"83.3% voitto-%", player:"Eetu" },
+  { emoji:"🎯", title:"Tasainen Tienari", value:"σ = 6.31", player:"Mäysä" },
+  { emoji:"💀", title:"Pisin tappioputki", value:"5 tappiota putkeen", player:"Lauri" },
+  { emoji:"🕳️", title:"Syvin Kuoppa", value:"-36.20€ yhtenä iltana", player:"Hypra" },
+  { emoji:"😱", title:"Pelottavin", value:"-4.81€/peli muille", player:"Eetu" },
+  { emoji:"🔥", title:"Pisin voittoputki", value:"7 peliä!", player:"Eetu" },
+  { emoji:"📉", title:"Isoin pudotus huipulta", value:"-78.40€", player:"Nuutti" },
+  { emoji:"🩸", title:"Verilöyly-ilta", value:"80€ swing", player:"Peli 1" },
+  { emoji:"🕊️", title:"Tiukin ilta", value:"11.60€ swing", player:"Peli 4" },
+];
+
+const titledPlayers = [
+  { name:"Eetu", title:"Voittokone 🏆", emoji:"🏆" },
+  { name:"Nuutti", title:"Yön Kuningas 👑", emoji:"👑" },
+  { name:"Mäysä", title:"Tasainen Tienari 🎯", emoji:"🎯" },
+  { name:"Hypra", title:"Syvin Kuoppa 🕳️", emoji:"🕳️" },
+  { name:"Lauri", title:"Kova Luuri 💀", emoji:"💀" },
+];
+
+// ===== RENDERING =====
+function fmt(v) { return v >= 0 ? `+${v.toFixed(2)}€` : `${v.toFixed(2)}€`; }
+function valClass(v) { return v > 0 ? 'val-positive' : v < 0 ? 'val-negative' : 'val-neutral'; }
+function levelClass(l) { return `level-${l}`; }
+function levelText(l) { return `Level ${l}`; }
+
+// ELO table
+document.getElementById('elo-table').innerHTML = eloRanking.map(r => `
+  <tr>
+    <td class="pos">${r.pos}</td>
+    <td class="player-name">${r.name}</td>
+    <td class="elo-val">${r.elo.toFixed(1)}</td>
+    <td>${r.games}</td>
+    <td class="${valClass(r.change)}">${r.change>=0?'+':''}${r.change.toFixed(1)}</td>
+    <td>${r.max.toFixed(1)}</td>
+    <td>${r.min.toFixed(1)}</td>
+    <td><span class="level-badge ${levelClass(r.level)}">${levelText(r.level)}</span></td>
+  </tr>
+`).join('');
+
+document.getElementById('prov-table').innerHTML = provisional.map(r => `
+  <tr>
+    <td class="player-name">${r.name}</td>
+    <td class="elo-val">${r.elo}</td>
+    <td>${r.games}</td>
+    <td style="color:var(--text-dim)">${r.missing}</td>
+  </tr>
+`).join('');
+
+// Results table
+document.getElementById('results-table').innerHTML = playerStats.map((r,i) => `
+  <tr>
+    <td class="pos">${i+1}</td>
+    <td class="player-name">${r.name}</td>
+    <td class="${valClass(r.total)}">${fmt(r.total)}</td>
+    <td>${r.games}</td>
+    <td class="${valClass(r.avg)}">${r.avg>=0?'+':''}${r.avg.toFixed(2)}€</td>
+    <td class="val-positive">${fmt(r.best)}</td>
+    <td class="val-negative">${fmt(r.worst)}</td>
+    <td style="color:var(--text-dim)">${r.variance.toFixed(2)}</td>
+  </tr>
+`).join('');
+
+// Games table
+document.getElementById('games-table').innerHTML = gameResults.map((row,i) => `
+  <tr>
+    <td style="font-weight:700">${i+1}</td>
+    ${row.map(v => v === null
+      ? `<td style="color:var(--text-dim);opacity:0.3">—</td>`
+      : `<td class="${valClass(v)}">${v>=0?'+':''}${v.toFixed(2)}</td>`
+    ).join('')}
+  </tr>
+`).join('');
+
+// Awards
+document.getElementById('awards-grid').innerHTML = awards.map(a => `
+  <div class="stat-card">
+    <div class="emoji">${a.emoji}</div>
+    <div class="stat-title">${a.title}</div>
+    <div class="stat-value">${a.value}</div>
+    <div class="stat-player">${a.player}</div>
+  </div>
+`).join('');
+
+// Titles
+document.getElementById('titles-grid').innerHTML = titledPlayers.map(t => `
+  <div class="title-card">
+    <div class="tc-emoji">${t.emoji}</div>
+    <div class="tc-info">
+      <div class="tc-name">${t.name}</div>
+      <div class="tc-title">${t.title}</div>
+    </div>
+  </div>
+`).join('');
+
+// H2H
+function renderH2H(arr, container, isNeg) {
+  document.getElementById(container).innerHTML = arr.map(h => `
+    <div class="h2h-pair">
+      <span class="h2h-corr ${isNeg?'corr-neg':'corr-pos'}">${h.corr.toFixed(3)}</span>
+      <span><strong>${h.p1}</strong> vs <strong>${h.p2}</strong></span>
+      <span style="margin-left:auto;color:var(--text-dim);font-size:0.8rem">${h.games} peliä</span>
+    </div>
+  `).join('');
+}
+renderH2H(enemies, 'enemies', true);
+renderH2H(allies, 'allies', false);
+
+// Streaks
+document.getElementById('streaks-table').innerHTML = streaks.map(s => `
+  <tr>
+    <td class="player-name">${s.name}</td>
+    <td class="val-positive">${'🔥'.repeat(Math.min(s.win,7))} ${s.win}</td>
+    <td class="val-negative">${'❄️'.repeat(Math.min(s.loss,5))} ${s.loss}</td>
+  </tr>
+`).join('');
+
+// Scary index
+document.getElementById('scary-table').innerHTML = scaryIndex.map(s => `
+  <tr>
+    <td class="player-name">${s.name}</td>
+    <td class="${valClass(s.withAvg)}">${s.withAvg>=0?'+':''}${s.withAvg.toFixed(2)}€</td>
+    <td class="${valClass(s.withoutAvg)}">${s.withoutAvg>=0?'+':''}${s.withoutAvg.toFixed(2)}€</td>
+    <td class="${valClass(s.impact)}">${s.impact>=0?'+':''}${s.impact.toFixed(2)}€</td>
+  </tr>
+`).join('');
+
+// Peak moments
+document.getElementById('peak-table').innerHTML = peakMoments.map(p => `
+  <tr>
+    <td class="player-name">${p.name}</td>
+    <td>Peli ${p.peak}</td>
+    <td class="val-positive">${fmt(p.peakVal)}</td>
+    <td class="${valClass(p.now)}">${fmt(p.now)}</td>
+    <td class="${valClass(p.lost)}">${fmt(p.lost)}</td>
+  </tr>
+`).join('');
+
+// ===== CHARTS =====
+const chartColors = {
+  "Eetu": "#00e68a",
+  "Jussi": "#4488ff",
+  "Lauri": "#ff4466",
+  "Nuutti": "#ffd700",
+  "Jere": "#aa66ff",
+  "Hypra": "#ff8844",
+  "Tiko": "#44dddd",
+  "Mäysä": "#ff66aa",
+};
+
+Chart.defaults.color = '#8888a0';
+Chart.defaults.borderColor = '#2a2a3d';
+Chart.defaults.font.family = 'Outfit';
+
+function makeDatasets(data) {
+  return Object.entries(data.datasets).map(([name, values]) => ({
+    label: name,
+    data: values,
+    borderColor: chartColors[name] || '#888',
+    backgroundColor: chartColors[name] ? chartColors[name]+'22' : '#88888822',
+    borderWidth: 2.5,
+    pointRadius: 3,
+    pointHoverRadius: 6,
+    tension: 0.3,
+  }));
+}
+
+let cumChart, eloChart;
+function initCharts() {
+  const cumCtx = document.getElementById('cumChart').getContext('2d');
+  cumChart = new Chart(cumCtx, {
+    type: 'line',
+    data: { labels: cumulativeData.labels, datasets: makeDatasets(cumulativeData) },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'top', labels:{ usePointStyle:true, pointStyle:'circle', padding:16 } },
+        tooltip: {
+          callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}€` }
+        }
+      },
+      scales: {
+        y: { grid:{ color:'#1a1a27' }, ticks:{ callback: v => v+'€' } },
+        x: { grid:{ color:'#1a1a27' }, title:{ display:true, text:'Peli #' } }
+      }
+    }
+  });
+
+  const eloCtx = document.getElementById('eloChart').getContext('2d');
+  eloChart = new Chart(eloCtx, {
+    type: 'line',
+    data: { labels: eloHistory.labels, datasets: makeDatasets(eloHistory) },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'top', labels:{ usePointStyle:true, pointStyle:'circle', padding:16 } },
+        tooltip: {
+          callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}` }
+        }
+      },
+      scales: {
+        y: { grid:{ color:'#1a1a27' } },
+        x: { grid:{ color:'#1a1a27' }, title:{ display:true, text:'Peli #' } }
+      }
+    }
+  });
+}
+
+// ===== TABS =====
+function showTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  if ((id === 'charts') && !cumChart) initCharts();
+  if (cumChart) { cumChart.resize(); eloChart.resize(); }
+}
+
+// Init charts on load if visible
+window.addEventListener('load', () => {
+  // Charts init when tab opened
+});
+</script>
+</body>
+</html>
