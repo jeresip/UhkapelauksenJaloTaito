@@ -308,7 +308,7 @@ function esc(p){return CSS.escape(p)}
 let cfCb=null;
 function showCf(t,txt,cb){document.getElementById('cf-title').textContent=t;document.getElementById('cf-text').textContent=txt;
 document.getElementById('confirm-modal').classList.add('show');cfCb=cb;
-document.getElementById('cf-yes').onclick=()=>{closeConfirm();if(cfCb)cfCb()}}
+document.getElementById('cf-yes').onclick=()=>{const cb=cfCb;closeConfirm();if(cb)cb()}}
 function closeConfirm(){document.getElementById('confirm-modal').classList.remove('show');cfCb=null}
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2500)}
 
